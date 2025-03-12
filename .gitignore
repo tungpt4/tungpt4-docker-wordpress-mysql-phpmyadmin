@@ -1,0 +1,6 @@
+# Exclude .env
+*.env
+
+# Exclude mounted volumes
+wordpress/
+db/

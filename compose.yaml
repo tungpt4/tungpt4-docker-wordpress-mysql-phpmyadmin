@@ -1,0 +1,80 @@
+networks:
+  demo:
+
+services:
+  wp:
+    image: wordpress:php8.3-apache
+    networks: ['demo']
+    container_name: ${NAME_WORDPRESS}
+    ports:
+      - ${PORT_WORDPRESS}:80      
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: ${NAME_DB}
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DB_NAME}
+    env_file:
+      - .env
+    healthcheck:
+      #test: ["CMD", "curl", "-f", "http://${NAME_WORDPRESS}"]      
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./wordpress:/var/www/html
+
+  mysql:
+    image: mysql:8.0
+    networks: ['demo']
+    container_name: ${NAME_DB}
+    restart: always
+    ports:
+      - ${PORT_MYSQL}:3306
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - ./db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    networks: ['demo']
+    container_name: ${NAME_PHPMYADMIN}
+    restart: always
+    ports:
+      - ${PORT_PHPMYADMIN}:80
+    environment:
+      PMA_HOST: ${NAME_DB}
+      PMA_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  ngrok:
+      image: ngrok/ngrok:latest
+      networks: ['demo']
+      restart: unless-stopped
+      environment:
+        NGROK_AUTHTOKEN: 2trQNB1GaQGLTXNRNr10UjWTXlO_5XHVpTLi97xwhRUV71Adb
+      command: ["http", "wp:80"]
+      ports:
+        - 4040:4040
+      depends_on:
+        - wp
